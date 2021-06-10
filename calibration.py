@@ -9,9 +9,12 @@ accelerometer = adafruit_adxl34x.ADXL345(i2c)
 accelerometer.range = adafruit_adxl34x.Range.RANGE_16_G # Range
 
 # Offset compensation (MANUAL CALIBRATION)
-OFSX = 0x2A # X-axis offset in LSBs
-OFSY = 0x26 # Y-axis offset in LSBs
-OFSZ = 0x80 # Z-axis offset in LSBs
+# OFSX = 0x2A # X-axis offset in LSBs (sensore amazon #1)
+# OFSY = 0x26 # Y-axis offset in LSBs (sensore amazon #1)
+# OFSZ = 0x80 # Z-axis offset in LSBs (sensore amazon #1)
+OFSX = 0x00 # X-axis offset in LSBs (sensore adafruit #1)
+OFSY = 0x00 # Y-axis offset in LSBs (sensore adafruit #1)
+OFSZ = 0x00 # Z-axis offset in LSBs (sensore adafruit #1)
 accelerometer._write_register_byte(adafruit_adxl34x._REG_OFSX, OFSX)
 accelerometer._write_register_byte(adafruit_adxl34x._REG_OFSY, OFSY) 
 accelerometer._write_register_byte(adafruit_adxl34x._REG_OFSZ, OFSZ)
