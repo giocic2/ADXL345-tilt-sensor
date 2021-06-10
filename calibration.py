@@ -3,8 +3,6 @@ import adafruit_adxl34x
 import busio
 import board
 from struct import unpack
-import numpy
-import bitstring
 
 i2c = busio.I2C(board.SCL, board.SDA, frequency=100e3)
 accelerometer = adafruit_adxl34x.ADXL345(i2c)
@@ -51,15 +49,15 @@ averages = 10
 x_avg = 0
 y_avg = 0
 z_avg = 0
-x_min = 0
-y_min = 0
-z_min = 0
-x_max = 0
-y_max = 0
-z_max = 0
+x_min = 4096
+y_min = 4096
+z_min = 4096
+x_max = -4096
+y_max = -4096
+z_max = -4096
+time.sleep(1)
 
 while True:
-	time.sleep(1)
 	for index in range(averages):
 		DATA_XYZ = accelerometer._read_register(adafruit_adxl34x._REG_DATAX0, 6)
 		x, y, z = unpack("<hhh",DATA_XYZ)
@@ -84,9 +82,15 @@ while True:
 		z_min = z_avg
 	if z_avg > z_max:
 		z_max = z_avg
+	delta_x = x_max - x_min
+	delta_y = y_max - y_min
+	delta_z = z_max - z_min
 	print("Minimum values (LSB): ", x_min, y_min, z_min)
 	print("Maximum values (LSB): ", x_max, y_max, z_max)
-	print("Excursion (~512 LSB): ", x_max-x_min, y_max-y_min, z_max-z_min)
+	print("Excursion (LSB): ", delta_x, delta_y, delta_z)
+	if delta_x > 512 or delta_y > 512 or delta_z > 512:
+		print("WARNING: your sensors seems to be out of range!")
+		print("Excursion should not exceed 512 LSB (+-1g).")
 	step=input("Enter something to repeat...")
 	x_avg = 0
 	y_avg = 0
