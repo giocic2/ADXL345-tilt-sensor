@@ -73,7 +73,7 @@ y_offset = round((y_min + y_max) / 2)
 z_offset = round((z_min + z_max) / 2)
 
 # Calibrated full-scale factor, for rescaling.
-# We assume that LSB:g relation in linear after rescaling.
+# We assume that LSB:g relation is linear after rescaling.
 # These numbers depends on calibration.py results for a specific sensor.
 x_cfs = numpy.ceil(delta_x / 2)
 y_cfs = numpy.ceil(delta_y / 2)
