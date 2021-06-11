@@ -3,6 +3,7 @@ import adafruit_adxl34x
 import busio
 import board
 from struct import unpack
+import numpy
 
 i2c = busio.I2C(board.SCL, board.SDA, frequency=100e3)
 accelerometer = adafruit_adxl34x.ADXL345(i2c)
@@ -48,56 +49,64 @@ accelerometer._write_register_byte(adafruit_adxl34x._REG_DATA_FORMAT, 0b00001011
 # bit5-1: samples needed to trigger watermark interrupt (immediately)  
 accelerometer._write_register_byte(adafruit_adxl34x._REG_FIFO_CTL, 0b10000000)
 
-averages = 10
-x_avg = 0
-y_avg = 0
-z_avg = 0
-x_min = 4096
-y_min = 4096
-z_min = 4096
-x_max = -4096
-y_max = -4096
-z_max = -4096
+# Edit 'offset' and 'calibrated full-scale' sections after "calibration.py" test.
+# Sensor: Adafruit #1
+x_min = -249
+x_max = 260
+delta_x = 509
+y_min = -244
+y_max = 261
+delta_y = 505
+z_min = -258
+z_max = 242
+delta_z = 500
+
+# Offset expressed in LSB.
+# We use this instead of OFS registers for finer tuning.
+# These numbers depends on calibration.py results for a specific sensor.
+x_offset = round((x_min + x_max) / 2)
+y_offset = round((y_min + y_max) / 2)
+z_offset = round((z_min + z_max) / 2)
+
+# Calibrated full-scale factor, for rescaling.
+# We assume that LSB:g relation in linear after rescaling.
+# These numbers depends on calibration.py results for a specific sensor.
+x_cfs = numpy.ceil(delta_x / 2)
+y_cfs = numpy.ceil(delta_y / 2)
+z_cfs = numpy.ceil(delta_z / 2)
+
 time.sleep(1)
+
+averages = 10
+x_g_avg = 0
+y_g_avg = 0
+z_g_avg = 0
+tiltAngle_1st_avg = 0
+tiltAngle_2nd_avg = 0
 
 while True:
 	for index in range(averages):
 		DATA_XYZ = accelerometer._read_register(adafruit_adxl34x._REG_DATAX0, 6)
-		x, y, z = unpack("<hhh",DATA_XYZ)
-		print(x, y, z)
 		time.sleep(0.1)
-		x_avg = x_avg + x/averages
-		y_avg = y_avg + y/averages
-		z_avg = z_avg + z/averages
-	x_avg = round(x_avg)
-	y_avg = round(y_avg)
-	z_avg = round(z_avg)
-	print("Average values: ", x_avg, y_avg, z_avg)
-	if x_avg < x_min:
-		x_min = x_avg
-	if x_avg > x_max:
-		x_max = x_avg
-	if y_avg < y_min:
-		y_min = y_avg
-	if y_avg > y_max:
-		y_max = y_avg
-	if z_avg < z_min:
-		z_min = z_avg
-	if z_avg > z_max:
-		z_max = z_avg
-	delta_x = x_max - x_min
-	delta_y = y_max - y_min
-	delta_z = z_max - z_min
-	print("Minimum values (LSB): ", x_min, y_min, z_min)
-	print("Maximum values (LSB): ", x_max, y_max, z_max)
-	print("Excursion (LSB): ", delta_x, delta_y, delta_z)
-	if delta_x > 524 or delta_y > 524 or delta_z > 524 or delta_x < 500 or delta_y < 500 or delta_z < 500:
-		print("WARNING: your sensors seems to be out of range! (by 12 LSBs at least...)")
-		print("Excursion should be 512 LSB (+-1g).")
-	step=input("Enter something to repeat...")
-	x_avg = 0
-	y_avg = 0
-	z_avg = 0
+		x, y, z = unpack("<hhh",DATA_XYZ)
+		x_g = x - x_offset
+		y_g = y - y_offset
+		z_g = z - z_offset
+		x_g_avg = x_g_avg + x_g/averages
+		y_g_avg = y_g_avg + y_g/averages
+		z_g_avg = z_g_avg + z_g/averages
+		# Two formulas to evaluate the same tilt angle
+		tiltAngle_1st = numpy.arcsin(- y_g_avg / y_cfs)
+		tiltAngle_2nd = numpy.arccos(+ z_g_avg / z_cfs)
+		tiltAngle_1st_avg = tiltAngle_1st_avg + tiltAngle_1st/averages
+		tiltAngle_2nd_avg = tiltAngle_2nd_avg + tiltAngle_2nd/averages
+	print("x y z [LSB]:", round(x_g_avg), round(y_g_avg), round(z_g_avg))
+	print("Tilt angle [deg] (two values that should be equal): {0:.2f} {1:.2f}".format(numpy.rad2deg(tiltAngle_1st_avg), numpy.rad2deg(tiltAngle_2nd_avg)))
 	accelerometer._write_register_byte(adafruit_adxl34x._REG_BW_RATE, 0b00000000)
 	accelerometer._write_register_byte(adafruit_adxl34x._REG_BW_RATE, 0b00001000)
-
+	step=input("Enter something to repeat...")
+	x_g_avg = 0
+	y_g_avg = 0
+	z_g_avg = 0
+	tiltAngle_1st_avg = 0
+	tiltAngle_2nd_avg = 0
