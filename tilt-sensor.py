@@ -1,3 +1,7 @@
+"""
+Evaluate tilt angle between Z and Y axis.
+Gravity along X-axis must be zero.
+"""
 import time
 import adafruit_adxl34x
 import busio
@@ -77,7 +81,7 @@ z_cfs = numpy.ceil(delta_z / 2)
 
 time.sleep(1)
 
-averages = 10
+averages = 20
 x_g_avg = 0
 y_g_avg = 0
 z_g_avg = 0
@@ -96,15 +100,21 @@ while True:
 		y_g_avg = y_g_avg + y_g/averages
 		z_g_avg = z_g_avg + z_g/averages
 		# Two formulas to evaluate the same tilt angle
-		tiltAngle_1st = numpy.arcsin(- y_g_avg / y_cfs)
-		tiltAngle_2nd = numpy.arccos(+ z_g_avg / z_cfs)
+		tiltAngle_1st = numpy.arcsin(- y_g / y_cfs)
+		tiltAngle_2nd = numpy.arccos(+ z_g / z_cfs)
 		tiltAngle_1st_avg = tiltAngle_1st_avg + tiltAngle_1st/averages
 		tiltAngle_2nd_avg = tiltAngle_2nd_avg + tiltAngle_2nd/averages
-	print("x y z [LSB]:", round(x_g_avg), round(y_g_avg), round(z_g_avg))
-	print("Tilt angle [deg] (two values that should be equal): {0:.2f} {1:.2f}".format(numpy.rad2deg(tiltAngle_1st_avg), numpy.rad2deg(tiltAngle_2nd_avg)))
+	tiltAngle_avg = (tiltAngle_1st_avg + tiltAngle_2nd_avg) / 2
+# 	print("x y z [LSB]:", round(x_g_avg), round(y_g_avg), round(z_g_avg))
+# 	print("Tilt angle [deg] (two values that should be equal): {0:.2f} {1:.2f}".format(numpy.rad2deg(tiltAngle_1st_avg), numpy.rad2deg(tiltAngle_2nd_avg)))
+	print("Estimated tilt angle [deg]: {0:.0f}".format(numpy.rad2deg(tiltAngle_avg)))
+	if round(x_g_avg) != 0:
+		print("WARNING: gravity along X-axis should be 0! Please align the sensor horizontally.")
+		print("x: ", round(x_g_avg))
 	accelerometer._write_register_byte(adafruit_adxl34x._REG_BW_RATE, 0b00000000)
 	accelerometer._write_register_byte(adafruit_adxl34x._REG_BW_RATE, 0b00001000)
-	step=input("Enter something to repeat...")
+# 	step=input("Enter something to repeat...")
+	time.sleep(0.5)
 	x_g_avg = 0
 	y_g_avg = 0
 	z_g_avg = 0
